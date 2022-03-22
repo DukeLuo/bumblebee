@@ -1,4 +1,7 @@
-import { Command, globToRegExp } from "./deps.ts";
+import { Command, ensureDir, globToRegExp } from "./deps.ts";
+
+const IMAGE_URL_REGEXP = /!\[\w*\]\((\S*)\)/gm;
+const DATE_REGEXP = /^date:\s*(\d{4})-(\d{2})-\d{2}/gm;
 
 const getParams = () => {
   const postPath: string = prompt(
@@ -17,7 +20,15 @@ const getParams = () => {
   return { postPath, fex, oldDomain, newDomain };
 };
 
+const download = async (url: string, folder: string, filename: string) => {
+  const data = await (await fetch(url)).arrayBuffer();
+
+  await ensureDir(folder);
+  return Deno.writeFile(`${folder}/${filename}`, new Uint8Array(data));
+};
+
 const bumblebee = async () => {
+  const dirname = new URL(".", import.meta.url).pathname;
   //deno-lint-ignore no-unused-vars
   const { postPath, fex, oldDomain, newDomain } = getParams();
   const regExp = globToRegExp(fex, {
@@ -27,8 +38,21 @@ const bumblebee = async () => {
   });
 
   for await (const { isFile, name } of Deno.readDir(postPath)) {
-    // deno-lint-ignore no-empty
     if (isFile && regExp.test(name)) {
+      const content = await Deno.readTextFile(name);
+      const dateMatch = DATE_REGEXP.exec(content) ?? [];
+      const year = dateMatch[1];
+      const month = dateMatch[2];
+      const urlMatches = content.matchAll(IMAGE_URL_REGEXP);
+
+      for (const match of urlMatches) {
+        const imageURL = match[1];
+        await download(
+          imageURL,
+          `${dirname}img/${year}/${month}`,
+          `${imageURL.slice(imageURL.lastIndexOf("/") + 1)}`,
+        );
+      }
     }
   }
 };
