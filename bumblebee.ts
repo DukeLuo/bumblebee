@@ -39,12 +39,14 @@ const edit = async (filename: string, content: string, changes: IChange[]) => {
   await Deno.writeFile(filename, data, { create: false });
 };
 
+const appendZero = (num: number) => (num < 10 ? `0${num}` : `${num}`);
+
 const migrate = async (filename: string, domain: string) => {
   console.log(`Migrating ${filename}...`);
   const content = await Deno.readTextFile(filename);
   const dateMatch = [...content.matchAll(DATE_REGEXP)];
-  const year = dateMatch[1];
-  const month = dateMatch[2];
+  const year = appendZero(+dateMatch[0][1]);
+  const month = appendZero(+dateMatch[0][2]);
   const urlMatches = content.matchAll(IMAGE_URL_REGEXP);
   const changes: IChange[] = [];
 
