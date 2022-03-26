@@ -12,12 +12,11 @@ const getParams = () => {
     "What file extensions would you like to scan?",
     "*.md",
   )!;
-  const oldDomain = prompt(
-    "What is the old domain you would like to replace?",
+  const domain = prompt(
+    "Which is your new domain name (e.g. files.shaiwang.life)?",
   );
-  const newDomain = prompt("What is your new domain?");
 
-  return { postPath, fex, oldDomain, newDomain };
+  return { postPath, fex, domain };
 };
 
 const download = async (url: string, folder: string, filename: string) => {
@@ -28,27 +27,54 @@ const download = async (url: string, folder: string, filename: string) => {
   return Deno.writeFile(`${folder}/${filename}`, new Uint8Array(data));
 };
 
-const migrate = async (filename: string) => {
+interface IChange {
+  old: string;
+  new: string;
+}
+
+const edit = async (filename: string, content: string, changes: IChange[]) => {
+  const encoder = new TextEncoder();
+  const newContent = changes.reduce(
+    (acc, { old, new: newValue }) => acc.replaceAll(old, newValue),
+    content,
+  );
+  const data = encoder.encode(newContent);
+
+  await Deno.writeFile(filename, data, { create: false });
+};
+
+const migrate = async (filename: string, domain: string) => {
   const content = await Deno.readTextFile(filename);
   const dateMatch = DATE_REGEXP.exec(content) ?? [];
   const year = dateMatch[1];
   const month = dateMatch[2];
   const urlMatches = content.matchAll(IMAGE_URL_REGEXP);
+  const changes: IChange[] = [];
 
   for (const match of urlMatches) {
     const imageURL = match[1];
+    const imageName = imageURL.slice(imageURL.lastIndexOf("/") + 1);
 
     await download(
       imageURL,
       `./img/${year}/${month}`,
-      `${imageURL.slice(imageURL.lastIndexOf("/") + 1)}`,
+      `${imageName}`,
     );
+    if (domain) {
+      changes.push({
+        old: imageURL,
+        new: `https://${domain}/${year}/${month}/${imageName}`,
+      });
+    }
+  }
+
+  if (changes.length) {
+    await edit(filename, content, changes);
   }
 };
 
 const bumblebee = async () => {
-  //deno-lint-ignore no-unused-vars
-  const { postPath, fex, oldDomain, newDomain } = getParams();
+  const { postPath, fex, domain } = getParams();
   const regExp = globToRegExp(fex, {
     extended: true,
     globstar: true,
@@ -57,7 +83,7 @@ const bumblebee = async () => {
 
   for await (const { isFile, name } of Deno.readDir(postPath)) {
     if (isFile && regExp.test(name)) {
-      await migrate(name);
+      await migrate(name, domain ?? "");
     }
   }
 };
