@@ -90,6 +90,6 @@ const bumblebee = async () => {
 new Command()
   .name("bumblebee")
   .description("CLI for migrating blog post images")
-  .version("0.0.1")
+  .version("1.0.0")
   .action(bumblebee)
   .parse(Deno.args);
