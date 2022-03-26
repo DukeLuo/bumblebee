@@ -40,6 +40,7 @@ const edit = async (filename: string, content: string, changes: IChange[]) => {
 };
 
 const migrate = async (filename: string, domain: string) => {
+  console.log(`Migrating ${filename}...`);
   const content = await Deno.readTextFile(filename);
   const dateMatch = [...content.matchAll(DATE_REGEXP)];
   const year = dateMatch[1];
