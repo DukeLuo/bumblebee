@@ -2,7 +2,7 @@ import { Command, ensureDir, globToRegExp } from "./deps.ts";
 import { IChange } from "./types.ts";
 
 const IMAGE_URL_REGEXP = /!\[\w*\]\((\S*)\)/gm;
-const DATE_REGEXP = /^date:\s*(\d{4})-(\d{2})-\d{2}/gm;
+const DATE_REGEXP = /^date:\s*(\d{4})-(\d{1,2})-\d{1,2}/gm;
 
 const getParams = () => {
   const postPath = prompt(
@@ -41,7 +41,7 @@ const edit = async (filename: string, content: string, changes: IChange[]) => {
 
 const migrate = async (filename: string, domain: string) => {
   const content = await Deno.readTextFile(filename);
-  const dateMatch = DATE_REGEXP.exec(content) ?? [];
+  const dateMatch = [...content.matchAll(DATE_REGEXP)];
   const year = dateMatch[1];
   const month = dateMatch[2];
   const urlMatches = content.matchAll(IMAGE_URL_REGEXP);
@@ -79,7 +79,7 @@ const bumblebee = async () => {
 
   for await (const { isFile, name } of Deno.readDir(postPath)) {
     if (isFile && regExp.test(name)) {
-      await migrate(name, domain ?? "");
+      await migrate(`${postPath}/${name}`, domain ?? "");
     }
   }
 };
