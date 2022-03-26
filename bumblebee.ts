@@ -1,4 +1,5 @@
 import { Command, ensureDir, globToRegExp } from "./deps.ts";
+import { IChange } from "./types.ts";
 
 const IMAGE_URL_REGEXP = /!\[\w*\]\((\S*)\)/gm;
 const DATE_REGEXP = /^date:\s*(\d{4})-(\d{2})-\d{2}/gm;
@@ -26,11 +27,6 @@ const download = async (url: string, folder: string, filename: string) => {
   await ensureDir(folder);
   return Deno.writeFile(`${folder}/${filename}`, new Uint8Array(data));
 };
-
-interface IChange {
-  old: string;
-  new: string;
-}
 
 const edit = async (filename: string, content: string, changes: IChange[]) => {
   const encoder = new TextEncoder();
